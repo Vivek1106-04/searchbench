@@ -89,6 +89,14 @@ def test_prompt_is_blind_and_numbered() -> None:
         ),
         (Judgment(supported="no"), Grounded("no", False)),
         (
+            Judgment(supported="yes", supporting_result_index=2, quote="Connections"),
+            Grounded("yes", False),
+        ),
+        (
+            Judgment(supported="yes", supporting_result_index=1, quote="Connections"),
+            Grounded("no", True),
+        ),
+        (
             Judgment(supported="yes", supporting_result_index=2, quote="5432 is the default"),
             Grounded("no", True),
         ),
@@ -111,6 +119,8 @@ def test_prompt_is_blind_and_numbered() -> None:
         "exact",
         "partial-stripped",
         "no",
+        "title",
+        "other-results-title",
         "fabricated",
         "wrong-result",
         "out-of-range",

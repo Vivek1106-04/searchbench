@@ -59,7 +59,10 @@ def build_prompt(task: Task, results: Sequence[Result]) -> str:
 
 
 def ground(judgment: Judgment, results: Sequence[Result]) -> Grounded:
-    """Keep a positive verdict only if its quote is literally in the cited result."""
+    """Keep a positive verdict only if its quote is literally in the cited result.
+
+    The title counts as part of the result: the judge is shown it, and so is an agent.
+    """
     if judgment.supported == "no":
         return Grounded("no", hallucinated=False)
     index, quote = judgment.supporting_result_index, (judgment.quote or "").strip()
@@ -67,7 +70,7 @@ def ground(judgment: Judgment, results: Sequence[Result]) -> Grounded:
         index is not None
         and index <= len(results)
         and quote
-        and quote in results[index - 1].content
+        and (quote in results[index - 1].content or quote in results[index - 1].title)
     ):
         return Grounded(judgment.supported, hallucinated=False)
     return Grounded("no", hallucinated=True)
