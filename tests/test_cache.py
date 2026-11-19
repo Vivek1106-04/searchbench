@@ -38,6 +38,7 @@ def test_later_entry_for_same_key_wins(tmp_path: Path) -> None:
 
     reopened = JsonlCache(path, Judgment)
     assert len(reopened) == 1
+    assert reopened.values() == [Judgment(supported="partial")]
     assert reopened.get("k") == Judgment(supported="partial")
 
 

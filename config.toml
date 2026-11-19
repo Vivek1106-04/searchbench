@@ -4,8 +4,10 @@ k = 5
 max_content_chars = 2000
 # The runner stops cleanly once estimated spend crosses this.
 max_spend_usd = 10.0
-# Retries on 429 and 5xx, including the first attempt.
+# Retries on 408, 429, 5xx and timeouts, including the first attempt.
 max_attempts = 3
+# First calls of a session were seen taking 15 to 26 seconds.
+request_timeout_s = 60.0
 
 [vendors.tavily]
 # Free tier allows 100 requests per minute.

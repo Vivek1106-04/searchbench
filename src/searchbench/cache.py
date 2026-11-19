@@ -46,5 +46,8 @@ class JsonlCache[M: BaseModel]:
             f.write(line + "\n")
         self._entries[key] = value
 
+    def values(self) -> list[M]:
+        return list(self._entries.values())
+
     def __len__(self) -> int:
         return len(self._entries)

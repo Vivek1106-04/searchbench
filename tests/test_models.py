@@ -1,10 +1,12 @@
+import json
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
-from searchbench.models import Judgment, Result, Task, VendorResponse
+from searchbench.models import Judgment, Result, Task, VendorResponse, load_tasks
 
 
 def task_fields(**overrides: Any) -> dict[str, Any]:
@@ -76,3 +78,25 @@ def test_judgment_result_index_is_one_based() -> None:
     assert Judgment(supported="yes", supporting_result_index=1, quote="5432").quote == "5432"
     with pytest.raises(ValidationError):
         Judgment(supported="yes", supporting_result_index=0, quote="5432")
+
+
+def test_load_tasks_reads_jsonl(tmp_path: Path) -> None:
+    path = tmp_path / "tasks.jsonl"
+    rows = [task_fields(id="a"), task_fields(id="b")]
+    path.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    assert [t.id for t in load_tasks(path)] == ["a", "b"]
+
+
+def test_load_tasks_rejects_duplicate_ids(tmp_path: Path) -> None:
+    path = tmp_path / "tasks.jsonl"
+    path.write_text(json.dumps(task_fields(id="a")) + "\n" + json.dumps(task_fields(id="a")) + "\n")
+
+    with pytest.raises(ValueError, match="duplicate task id a"):
+        load_tasks(path)
+
+
+def test_committed_suite_is_valid() -> None:
+    tasks = load_tasks(Path(__file__).parent.parent / "suites" / "web_v1" / "tasks.jsonl")
+
+    assert len(tasks) == 60

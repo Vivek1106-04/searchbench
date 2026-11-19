@@ -1,4 +1,5 @@
 from datetime import date
+from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, StringConstraints
@@ -42,3 +43,13 @@ class Judgment(Frozen):
     supported: Support
     supporting_result_index: int | None = Field(default=None, ge=1)
     quote: str | None = None
+
+
+def load_tasks(path: Path) -> list[Task]:
+    tasks = [Task.model_validate_json(line) for line in path.read_text().splitlines() if line]
+    seen: set[str] = set()
+    for task in tasks:
+        if task.id in seen:
+            raise ValueError(f"{path}: duplicate task id {task.id}")
+        seen.add(task.id)
+    return tasks

@@ -11,6 +11,7 @@ class RunConfig(Frozen):
     max_content_chars: int = Field(ge=1)
     max_spend_usd: float = Field(gt=0)
     max_attempts: int = Field(ge=1)
+    request_timeout_s: float = Field(gt=0)
 
 
 class VendorLimits(Frozen):
