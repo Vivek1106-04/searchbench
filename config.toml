@@ -13,12 +13,14 @@ concurrency = 4
 requests_per_second = 1.5
 
 [vendors.exa]
+# Default limit is 10 queries per second.
 concurrency = 4
 requests_per_second = 2.0
 
 [vendors.firecrawl]
+# Free tier allows 10 requests per minute and 2 concurrent requests.
 concurrency = 2
-requests_per_second = 1.0
+requests_per_second = 0.15
 
 [judge]
 primary_model = "gemini-3.1-pro-preview"
