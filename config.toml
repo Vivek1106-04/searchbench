@@ -8,8 +8,9 @@ max_spend_usd = 10.0
 max_attempts = 3
 
 [vendors.tavily]
+# Free tier allows 100 requests per minute.
 concurrency = 4
-requests_per_second = 2.0
+requests_per_second = 1.5
 
 [vendors.exa]
 concurrency = 4
