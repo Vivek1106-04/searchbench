@@ -1,0 +1,26 @@
+[run]
+k = 5
+# Same context budget for every vendor: content is cut after normalization.
+max_content_chars = 2000
+# The runner stops cleanly once estimated spend crosses this.
+max_spend_usd = 10.0
+# Retries on 429 and 5xx, including the first attempt.
+max_attempts = 3
+
+[vendors.tavily]
+concurrency = 4
+requests_per_second = 2.0
+
+[vendors.exa]
+concurrency = 4
+requests_per_second = 2.0
+
+[vendors.firecrawl]
+concurrency = 2
+requests_per_second = 1.0
+
+[judge]
+primary_model = "gemini-3.1-pro-preview"
+second_model = "gemini-3.5-flash-lite"
+seed = 1
+temperature = 0.0
