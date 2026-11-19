@@ -87,7 +87,9 @@ def make_config(
             request_timeout_s=60.0,
         ),
         vendors=vendors or {"a": VendorLimits(concurrency=1, requests_per_second=100.0)},
-        judge=JudgeConfig(primary_model="p", second_model="s", seed=1, temperature=0.0),
+        judge=JudgeConfig(
+            primary_model="p", second_model="s", seed=1, temperature=0.0, concurrency=1
+        ),
     )
 
 

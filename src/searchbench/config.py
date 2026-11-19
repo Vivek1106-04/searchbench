@@ -24,6 +24,7 @@ class JudgeConfig(Frozen):
     second_model: NonEmpty
     seed: int
     temperature: float = Field(ge=0)
+    concurrency: int = Field(ge=1)
 
 
 class Config(Frozen):

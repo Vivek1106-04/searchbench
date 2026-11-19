@@ -6,6 +6,8 @@ from pathlib import Path
 import httpx
 import pytest
 import respx
+import typer
+from google.genai import types
 from typer.testing import CliRunner
 
 from searchbench import cli, runner
@@ -204,3 +206,99 @@ def instant_runner(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         cli, "run_snapshot", functools.partial(runner.run_snapshot, sleep=_no_sleep)
     )
+
+
+class CannedModels:
+    async def generate_content(
+        self, *, model: str, contents: str, config: object
+    ) -> types.GenerateContentResponse:
+        part = types.Part(
+            text='{"supported": "no", "supporting_result_index": null, "quote": null}'
+        )
+        return types.GenerateContentResponse(
+            candidates=[types.Candidate(content=types.Content(role="model", parts=[part]))]
+        )
+
+
+@respx.mock
+def test_judge_command_judges_a_stored_snapshot(
+    keys: None, suite: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mock_vendors()
+    instant_runner(monkeypatch)
+    invoke_run(tmp_path, suite)
+    monkeypatch.setattr(cli, "vertex_models", CannedModels)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "judge",
+            "--snapshot",
+            "snap",
+            "--config",
+            str(REPO / "config.toml"),
+            "--suite",
+            str(suite),
+            "--results",
+            str(tmp_path / "results"),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "6 pairs judged by gemini-3.1-pro-preview and gemini-3.5-flash-lite" in result.output
+    judgments = tmp_path / "results" / "snap" / "judgments"
+    assert sorted(p.name for p in judgments.iterdir()) == [
+        "gemini-3.1-pro-preview.jsonl",
+        "gemini-3.5-flash-lite.jsonl",
+    ]
+
+
+def test_judge_command_needs_stored_responses(tmp_path: Path, suite: Path) -> None:
+    result = CliRunner().invoke(
+        app,
+        [
+            "judge",
+            "--snapshot",
+            "none",
+            "--config",
+            str(REPO / "config.toml"),
+            "--suite",
+            str(suite),
+            "--results",
+            str(tmp_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "run `bench run` first" in result.output
+
+
+def test_vertex_models_uses_vertex_with_adc_and_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, object] = {}
+
+    class FakeClient:
+        def __init__(self, **kwargs: object) -> None:
+            seen.update(kwargs)
+            self.aio = _Aio()
+
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "proj")
+    monkeypatch.setenv("GOOGLE_CLOUD_LOCATION", "global")
+    monkeypatch.setattr("searchbench.cli.genai.Client", FakeClient)
+
+    models: object = cli.vertex_models()
+    assert models == "models"
+    assert seen["vertexai"] is True
+    assert (seen["project"], seen["location"]) == ("proj", "global")
+    assert "api_key" not in seen
+
+
+def test_vertex_models_requires_project_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    monkeypatch.setenv("GOOGLE_CLOUD_LOCATION", "global")
+
+    with pytest.raises(typer.BadParameter, match="GOOGLE_CLOUD_PROJECT"):
+        cli.vertex_models()
+
+
+class _Aio:
+    models = "models"
