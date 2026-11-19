@@ -35,3 +35,34 @@ that vendors are compared at what an agent would actually pay.
   Two calls took 12 to 15 seconds and one exceeded a 30 second read timeout,
   while later calls reported a server `response_time` under 3 seconds. Timeouts
   are therefore retried like 429 and 5xx.
+
+## Exa
+
+- Docs read 2026-11-19:
+  - https://docs.exa.ai/reference/search
+  - https://exa.ai/docs/search/quickstart.md
+  - https://exa.ai/docs/admin/billing.md
+  - https://exa.ai/docs/admin/error-codes.md
+  - https://exa.ai/pricing
+- Endpoint: `POST https://api.exa.ai/search`, header `x-api-key: <EXA_API_KEY>`.
+- Request: `{"query": ..., "numResults": 5, "contents": {"highlights":
+  {"maxCharacters": 2000}}}`. `type` is left at its default, `auto`.
+- Mode choice: the default returns no content text, only URLs and titles, so
+  content has to be requested. Text and highlights cost the same (nothing extra
+  on `/search`). Highlights were chosen because they are query-relevant
+  excerpts, the closest match to the snippets other vendors return by default.
+  The first 2,000 characters of full page text are often navigation and would
+  measure our truncation rather than Exa's retrieval. Highlights of one result
+  are joined with a space before normalization.
+- Cost: `auto` is 7 USD per 1,000 searches for up to 10 results, so 0.007 USD
+  per call. The response also carries `costDollars`, an estimate that is kept
+  in `raw` for audit but not used.
+- Free tier: 10 USD of credit on signup.
+- Rate limit: 10 queries per second for `/search`, shared across team keys.
+- Errors: 429 and 5xx (including 503 overloaded, which is not billed) are
+  retried; 400, 401, 402 (out of credit or over budget) and 403 are not.
+- Smoke run 2026-11-19 (5 tasks, 0.035 USD reported by `costDollars`, matching
+  the table): every call returned 5 results, a gold domain was in the top 5 for
+  all 5 tasks. Highlight length ranged from about 200 characters (fresh task)
+  to the 2,000 cap. The first call took 26 seconds; the rest took 2 to 4. One
+  result had an empty title, which is accepted.
