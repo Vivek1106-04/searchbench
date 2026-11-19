@@ -23,6 +23,9 @@ concurrency = 2
 requests_per_second = 0.15
 
 [judge]
+# Both ids confirmed callable on Vertex AI, location "global", 2026-11-19.
+# The primary is a thinking model: seeded reruns keep the verdict but can
+# change the quote, so judgments are read back from the cache, never re-run.
 primary_model = "gemini-3.1-pro-preview"
 second_model = "gemini-3.5-flash-lite"
 seed = 1
