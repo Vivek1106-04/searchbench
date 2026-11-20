@@ -13,6 +13,7 @@ from typer.testing import CliRunner
 from searchbench import cli, runner
 from searchbench.cli import app
 from searchbench.vendors import exa, firecrawl, tavily
+from tests.snapshots import task, verdict, write_snapshot
 
 REPO = Path(__file__).parent.parent
 KEYS = ("TAVILY_API_KEY", "EXA_API_KEY", "FIRECRAWL_API_KEY")
@@ -355,3 +356,74 @@ def test_label_command_needs_stored_responses(tmp_path: Path, suite: Path) -> No
 
     assert result.exit_code != 0
     assert "no stored responses" in result.output
+
+
+SYNTHETIC_CONFIG = """
+[run]
+k = 5
+max_content_chars = 2000
+max_spend_usd = 10.0
+max_attempts = 3
+request_timeout_s = 60.0
+
+[vendors.alpha]
+concurrency = 1
+requests_per_second = 1.0
+
+[vendors.beta]
+concurrency = 1
+requests_per_second = 1.0
+
+[judge]
+primary_model = "judge-pro"
+second_model = "judge-lite"
+seed = 1
+temperature = 0.0
+concurrency = 1
+"""
+
+
+def synthetic_workspace(tmp_path: Path, snapshots: dict[str, str]) -> list[str]:
+    """Write config, suite and one snapshot per id with every pair judged as given."""
+    tasks = [task(i) for i in range(4)] + [task(10, "fresh")]
+    (tmp_path / "config.toml").write_text(SYNTHETIC_CONFIG)
+    (tmp_path / "tasks.jsonl").write_text("".join(t.model_dump_json() + "\n" for t in tasks))
+    for snap, supported in snapshots.items():
+        judgments = {
+            (v, t.id): verdict("yes" if supported == "yes" else "no", t)
+            for v in ("alpha", "beta")
+            for t in tasks
+        }
+        write_snapshot(tmp_path / "results" / snap, tasks, judgments)
+    return [
+        "--config",
+        str(tmp_path / "config.toml"),
+        "--suite",
+        str(tmp_path / "tasks.jsonl"),
+        "--results",
+        str(tmp_path / "results"),
+    ]
+
+
+def test_report_command_writes_report_and_plot(tmp_path: Path) -> None:
+    options = synthetic_workspace(tmp_path, {"s1": "yes"})
+
+    result = CliRunner().invoke(
+        app, ["report", "--snapshot", "s1", *options, "--labels", str(tmp_path / "none.jsonl")]
+    )
+
+    assert result.exit_code == 0, result.output
+    snapshot_dir = tmp_path / "results" / "s1"
+    assert (snapshot_dir / "REPORT.md").read_text().startswith("# searchbench report: s1")
+    assert (snapshot_dir / "cost_vs_support.png").read_bytes().startswith(b"\x89PNG")
+
+
+def test_drift_command_prints_the_comparison(tmp_path: Path) -> None:
+    options = synthetic_workspace(tmp_path, {"s1": "yes", "s2": "no"})
+
+    result = CliRunner().invoke(app, ["drift", "s1", "s2", *options])
+
+    assert result.exit_code == 0, result.output
+    assert "# Drift: s1 -> s2" in result.output
+    assert "| alpha | other | 4 | -1.00 [-1.00, -1.00] | yes |" in result.output
+    assert "| beta | fresh | 1 |" in result.output

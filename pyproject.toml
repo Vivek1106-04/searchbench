@@ -30,6 +30,7 @@ bench = "searchbench.cli:app"
 
 [dependency-groups]
 dev = [
+    "matplotlib>=3.9",
     "mypy>=1.14",
     "pytest>=8.3",
     "pytest-asyncio>=0.25",

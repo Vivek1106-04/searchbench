@@ -83,6 +83,38 @@ def _unreverse(judgment: Judgment, n: int) -> Judgment:
     return judgment.model_copy(update={"supporting_result_index": n + 1 - index})
 
 
+def judgment_key(
+    model: str, seed: int, temperature: float, task: Task, shown: Sequence[Result]
+) -> str:
+    return cache_key(model, seed, temperature, build_prompt(task, shown))
+
+
+def _order(results: Sequence[Result], reverse: bool) -> list[Result]:
+    return list(reversed(results)) if reverse else list(results)
+
+
+def _restore(judgment: Judgment, n: int, reverse: bool) -> Judgment:
+    return _unreverse(judgment, n) if reverse else judgment
+
+
+def lookup_judgment(
+    cache: JsonlCache[Judgment],
+    model: str,
+    seed: int,
+    temperature: float,
+    task: Task,
+    results: Sequence[Result],
+    *,
+    reverse: bool = False,
+) -> Judgment | None:
+    """A cached judgment in original result order; never calls the model."""
+    if not results:
+        return Judgment(supported="no")
+    shown = _order(results, reverse)
+    judgment = cache.get(judgment_key(model, seed, temperature, task, shown))
+    return None if judgment is None else _restore(judgment, len(shown), reverse)
+
+
 class Judge:
     def __init__(
         self,
@@ -108,11 +140,9 @@ class Judge:
         self, task: Task, results: Sequence[Result], *, reverse: bool = False
     ) -> Judgment | None:
         """The cached judgment, if any; never calls the model."""
-        if not results:
-            return Judgment(supported="no")
-        shown = self._order(results, reverse)
-        judgment = self._cache.get(self._key(task, shown))
-        return None if judgment is None else self._restore(judgment, len(shown), reverse)
+        return lookup_judgment(
+            self._cache, self.model, self._seed, self._temperature, task, results, reverse=reverse
+        )
 
     async def judge(
         self, task: Task, results: Sequence[Result], *, reverse: bool = False
@@ -122,24 +152,14 @@ class Judge:
         cached = self.lookup(task, results, reverse=reverse)
         if cached is not None:
             return cached
-        shown = self._order(results, reverse)
+        shown = _order(results, reverse)
         response = await self._models.generate_content(
             model=self.model, contents=build_prompt(task, shown), config=self._config
         )
         judgment = Judgment.model_validate_json(response.text or "")
-        self._cache.put(self._key(task, shown), judgment)
-        return self._restore(judgment, len(shown), reverse)
-
-    def _key(self, task: Task, shown: Sequence[Result]) -> str:
-        return cache_key(self.model, self._seed, self._temperature, build_prompt(task, shown))
-
-    @staticmethod
-    def _order(results: Sequence[Result], reverse: bool) -> list[Result]:
-        return list(reversed(results)) if reverse else list(results)
-
-    @staticmethod
-    def _restore(judgment: Judgment, n: int, reverse: bool) -> Judgment:
-        return _unreverse(judgment, n) if reverse else judgment
+        key = judgment_key(self.model, self._seed, self._temperature, task, shown)
+        self._cache.put(key, judgment)
+        return _restore(judgment, len(shown), reverse)
 
 
 def judgment_cache(snapshot_dir: Path, model: str) -> JsonlCache[Judgment]:

@@ -12,6 +12,8 @@ from google import genai
 from google.genai import types
 
 from searchbench.config import Config, load_config
+from searchbench.drift import compare
+from searchbench.drift import render as render_drift
 from searchbench.judge import (
     GenerateContent,
     Judge,
@@ -21,8 +23,9 @@ from searchbench.judge import (
     judgment_cache,
     snapshot_pairs,
 )
-from searchbench.label import LABELS_PER_CATEGORY, label_sample, run_labeling
+from searchbench.label import LABELS_PER_CATEGORY, label_sample, load_labels, run_labeling
 from searchbench.models import Task, load_tasks
+from searchbench.report import PLOT_NAME, build_report, write_plot
 from searchbench.runner import RunSummary, run_snapshot, snapshot_id
 from searchbench.vendors.base import SearchVendor
 from searchbench.vendors.exa import ExaVendor
@@ -177,3 +180,34 @@ def label(
         sample, snapshot, labels, ask=lambda message: str(typer.prompt(message)), show=typer.echo
     )
     typer.echo(f"recorded {recorded} label(s) in {labels}")
+
+
+@app.command()
+def report(
+    snapshot: Annotated[str, typer.Option(help="Snapshot id to report on.")],
+    config_path: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
+    suite: Annotated[Path, typer.Option()] = Path("suites/web_v1/tasks.jsonl"),
+    results: Annotated[Path, typer.Option()] = Path("results"),
+    labels: Annotated[Path, typer.Option()] = Path("suites/web_v1/human_labels.jsonl"),
+) -> None:
+    """Write REPORT.md and the cost plot from stored files only: no network, no model calls."""
+    snapshot_dir = results / snapshot
+    text, stats = build_report(
+        snapshot, snapshot_dir, load_tasks(suite), load_config(config_path), load_labels(labels)
+    )
+    (snapshot_dir / "REPORT.md").write_text(text, encoding="ascii")
+    write_plot(stats, snapshot_dir / PLOT_NAME)
+    typer.echo(f"wrote {snapshot_dir / 'REPORT.md'} and {snapshot_dir / PLOT_NAME}")
+
+
+@app.command()
+def drift(
+    snap_a: Annotated[str, typer.Argument(help="Earlier snapshot id.")],
+    snap_b: Annotated[str, typer.Argument(help="Later snapshot id.")],
+    config_path: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
+    suite: Annotated[Path, typer.Option()] = Path("suites/web_v1/tasks.jsonl"),
+    results: Annotated[Path, typer.Option()] = Path("results"),
+) -> None:
+    """Compare support@5 per vendor between two snapshots on the same tasks."""
+    rows = compare(results / snap_a, results / snap_b, load_tasks(suite), load_config(config_path))
+    typer.echo(render_drift(snap_a, snap_b, rows))
