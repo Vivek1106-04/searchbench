@@ -53,3 +53,10 @@ def load_tasks(path: Path) -> list[Task]:
             raise ValueError(f"{path}: duplicate task id {task.id}")
         seen.add(task.id)
     return tasks
+
+
+class HumanLabel(Frozen):
+    snapshot: NonEmpty
+    task_id: NonEmpty
+    vendor: NonEmpty
+    supported: Support

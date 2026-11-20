@@ -21,6 +21,7 @@ from searchbench.judge import (
     judgment_cache,
     snapshot_pairs,
 )
+from searchbench.label import LABELS_PER_CATEGORY, label_sample, run_labeling
 from searchbench.models import Task, load_tasks
 from searchbench.runner import RunSummary, run_snapshot, snapshot_id
 from searchbench.vendors.base import SearchVendor
@@ -150,3 +151,29 @@ def judge(
         f"snapshot {snapshot}: {summary.pairs} pairs judged by {cfg.primary_model} and "
         f"{cfg.second_model}, {summary.reversed} re-judged in reverse order"
     )
+
+
+@app.command()
+def label(
+    snapshot: Annotated[str, typer.Option(help="Snapshot id whose responses are labelled.")],
+    config_path: Annotated[Path, typer.Option("--config")] = Path("config.toml"),
+    suite: Annotated[Path, typer.Option()] = Path("suites/web_v1/tasks.jsonl"),
+    results: Annotated[Path, typer.Option()] = Path("results"),
+    labels: Annotated[Path, typer.Option()] = Path("suites/web_v1/human_labels.jsonl"),
+) -> None:
+    """Label a blind, category-stratified sample of (task, vendor) pairs by hand."""
+    config = load_config(config_path)
+    pairs = snapshot_pairs(
+        load_tasks(suite),
+        list(config.vendors),
+        results / snapshot,
+        config.run.k,
+        config.run.max_content_chars,
+    )
+    if not pairs:
+        raise typer.BadParameter(f"no stored responses in {results / snapshot}")
+    sample = label_sample(pairs, LABELS_PER_CATEGORY, config.judge.seed)
+    recorded = run_labeling(
+        sample, snapshot, labels, ask=lambda message: str(typer.prompt(message)), show=typer.echo
+    )
+    typer.echo(f"recorded {recorded} label(s) in {labels}")

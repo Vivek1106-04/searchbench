@@ -302,3 +302,56 @@ def test_vertex_models_requires_project_env(monkeypatch: pytest.MonkeyPatch) -> 
 
 class _Aio:
     models = "models"
+
+
+@respx.mock
+def test_label_command_records_answers(
+    keys: None, suite: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mock_vendors()
+    instant_runner(monkeypatch)
+    invoke_run(tmp_path, suite)
+    labels = tmp_path / "human_labels.jsonl"
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "label",
+            "--snapshot",
+            "snap",
+            "--config",
+            str(REPO / "config.toml"),
+            "--suite",
+            str(suite),
+            "--results",
+            str(tmp_path / "results"),
+            "--labels",
+            str(labels),
+        ],
+        input="y\nq\n",
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "recorded 1 label(s)" in result.output
+    assert "https://" not in result.output
+    assert len(labels.read_text().splitlines()) == 1
+
+
+def test_label_command_needs_stored_responses(tmp_path: Path, suite: Path) -> None:
+    result = CliRunner().invoke(
+        app,
+        [
+            "label",
+            "--snapshot",
+            "none",
+            "--config",
+            str(REPO / "config.toml"),
+            "--suite",
+            str(suite),
+            "--results",
+            str(tmp_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "no stored responses" in result.output
