@@ -52,6 +52,13 @@ def mock_vendors() -> None:
     respx.post(firecrawl.SEARCH_URL).mock(return_value=httpx.Response(503))
 
 
+def usage_error(args: list[str]) -> str:
+    """The BadParameter message, unrendered: Rich wraps and colours it differently in CI."""
+    result = CliRunner().invoke(app, args, standalone_mode=False)
+    assert isinstance(result.exception, typer.BadParameter), result.output
+    return result.exception.format_message()
+
+
 def invoke_run(tmp_path: Path, suite: Path, *extra: str) -> tuple[int, str]:
     result = CliRunner().invoke(
         app,
@@ -144,11 +151,22 @@ def test_empty_key_is_rejected_before_any_call(
     monkeypatch.setenv("FIRECRAWL_API_KEY", "  ")
     monkeypatch.delenv("EXA_API_KEY")
 
-    code, output = invoke_run(tmp_path, suite)
+    message = usage_error(
+        [
+            "run",
+            "--config",
+            str(REPO / "config.toml"),
+            "--suite",
+            str(suite),
+            "--results",
+            str(tmp_path / "results"),
+            "--snapshot",
+            "snap",
+        ]
+    )
 
-    assert code != 0
-    assert "EXA_API_KEY" in output
-    assert "FIRECRAWL_API_KEY" in output
+    assert "EXA_API_KEY" in message
+    assert "FIRECRAWL_API_KEY" in message
     assert not (tmp_path / "results").exists()
 
 
@@ -158,12 +176,9 @@ def test_unknown_vendor_in_config_is_rejected(keys: None, suite: Path, tmp_path:
     ).read_text() + "\n[vendors.bing]\nconcurrency = 1\nrequests_per_second = 1.0\n"
     (tmp_path / "config.toml").write_text(config)
 
-    result = CliRunner().invoke(
-        app, ["run", "--config", str(tmp_path / "config.toml"), "--suite", str(suite)]
-    )
+    message = usage_error(["run", "--config", str(tmp_path / "config.toml"), "--suite", str(suite)])
 
-    assert result.exit_code != 0
-    assert "unknown vendor 'bing'" in result.output
+    assert "unknown vendor 'bing'" in message
 
 
 def test_snapshot_defaults_to_date_and_git_sha(
@@ -255,8 +270,7 @@ def test_judge_command_judges_a_stored_snapshot(
 
 
 def test_judge_command_needs_stored_responses(tmp_path: Path, suite: Path) -> None:
-    result = CliRunner().invoke(
-        app,
+    message = usage_error(
         [
             "judge",
             "--snapshot",
@@ -267,11 +281,10 @@ def test_judge_command_needs_stored_responses(tmp_path: Path, suite: Path) -> No
             str(suite),
             "--results",
             str(tmp_path),
-        ],
+        ]
     )
 
-    assert result.exit_code != 0
-    assert "run `bench run` first" in result.output
+    assert "run `bench run` first" in message
 
 
 def test_vertex_models_uses_vertex_with_adc_and_retries(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -339,8 +352,7 @@ def test_label_command_records_answers(
 
 
 def test_label_command_needs_stored_responses(tmp_path: Path, suite: Path) -> None:
-    result = CliRunner().invoke(
-        app,
+    message = usage_error(
         [
             "label",
             "--snapshot",
@@ -351,11 +363,10 @@ def test_label_command_needs_stored_responses(tmp_path: Path, suite: Path) -> No
             str(suite),
             "--results",
             str(tmp_path),
-        ],
+        ]
     )
 
-    assert result.exit_code != 0
-    assert "no stored responses" in result.output
+    assert "no stored responses" in message
 
 
 SYNTHETIC_CONFIG = """
