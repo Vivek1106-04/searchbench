@@ -60,3 +60,5 @@ class HumanLabel(Frozen):
     task_id: NonEmpty
     vendor: NonEmpty
     supported: Support
+    # Round 1 labels predate the rubric on the labelling screen; later rounds see it.
+    round: int = Field(default=1, ge=1)

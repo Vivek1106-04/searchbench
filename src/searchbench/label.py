@@ -4,7 +4,7 @@ from collections import defaultdict
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
-from searchbench.judge import Pair
+from searchbench.judge import RUBRIC, Pair
 from searchbench.models import HumanLabel, Support
 
 LABELS_PER_CATEGORY = 8
@@ -12,17 +12,27 @@ ANSWERS: dict[str, Support] = {"y": "yes", "p": "partial", "n": "no"}
 QUIT = "q"
 
 
-def label_sample(pairs: Sequence[Pair], per_category: int, seed: int) -> list[Pair]:
-    """A seeded sample with the same number of pairs from every category, in mixed order."""
+def label_sample(
+    pairs: Sequence[Pair], verdicts: Sequence[Support], per_category: int, seed: int
+) -> list[Pair]:
+    """A seeded sample with the same number of pairs from every category, in mixed order.
+
+    Within a category, pairs are drawn in turn from each judge verdict, so rare verdicts
+    are labelled too; with nearly all labels "yes", kappa cannot be estimated.
+    """
     rng = random.Random(seed)
-    by_category: dict[str, list[Pair]] = defaultdict(list)
-    for pair in pairs:
-        by_category[pair.task.category].append(pair)
-    sample = [
-        pair
-        for category in sorted(by_category)
-        for pair in rng.sample(by_category[category], min(per_category, len(by_category[category])))
-    ]
+    groups: dict[str, dict[Support, list[Pair]]] = defaultdict(lambda: defaultdict(list))
+    for pair, verdict in zip(pairs, verdicts, strict=True):
+        groups[pair.task.category][verdict].append(pair)
+    sample: list[Pair] = []
+    for category in sorted(groups):
+        pools = [rng.sample(pool, len(pool)) for _, pool in sorted(groups[category].items())]
+        picked = 0
+        while picked < per_category and any(pools):
+            for pool in pools:
+                if pool and picked < per_category:
+                    sample.append(pool.pop())
+                    picked += 1
     rng.shuffle(sample)
     return sample
 
@@ -42,6 +52,8 @@ def render(pair: Pair, number: int, total: int) -> str:
         f"Known answer: {task.gold_answer}",
         f"Example evidence: {task.gold_evidence}",
         "",
+        RUBRIC,
+        "",
     ]
     for i, result in enumerate(pair.response.results, start=1):
         lines += [f"[{i}] {result.title}", f"    {result.content}", ""]
@@ -56,6 +68,7 @@ def run_labeling(
     path: Path,
     ask: Callable[[str], str],
     show: Callable[[str], None],
+    round_number: int = 1,
 ) -> int:
     """Ask for a label on every unlabelled pair; returns how many were recorded."""
     done = {
@@ -71,7 +84,11 @@ def run_labeling(
         if answer == QUIT:
             return recorded
         label = HumanLabel(
-            snapshot=snapshot, task_id=pair.task.id, vendor=pair.vendor, supported=ANSWERS[answer]
+            snapshot=snapshot,
+            task_id=pair.task.id,
+            vendor=pair.vendor,
+            supported=ANSWERS[answer],
+            round=round_number,
         )
         with path.open("a", encoding="ascii") as f:
             f.write(json.dumps(label.model_dump(), ensure_ascii=True) + "\n")

@@ -38,3 +38,43 @@
 {"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_018", "vendor": "firecrawl", "supported": "yes"}
 {"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_052", "vendor": "exa", "supported": "yes"}
 {"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_027", "vendor": "tavily", "supported": "yes"}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_059", "vendor": "firecrawl", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_019", "vendor": "firecrawl", "supported": "no", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_039", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_036", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_040", "vendor": "firecrawl", "supported": "no", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_033", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_042", "vendor": "firecrawl", "supported": "no", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_005", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_051", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_060", "vendor": "firecrawl", "supported": "no", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_006", "vendor": "firecrawl", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_015", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_020", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_021", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_045", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_016", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_036", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_028", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_046", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_056", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_055", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_054", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_028", "vendor": "firecrawl", "supported": "no", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_048", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_022", "vendor": "tavily", "supported": "partial", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_002", "vendor": "firecrawl", "supported": "no", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_033", "vendor": "firecrawl", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_035", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_018", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_053", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_044", "vendor": "firecrawl", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_007", "vendor": "firecrawl", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_017", "vendor": "firecrawl", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_032", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_050", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_002", "vendor": "tavily", "supported": "no", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_037", "vendor": "tavily", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_003", "vendor": "exa", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_008", "vendor": "firecrawl", "supported": "yes", "round": 2}
+{"snapshot": "2026-11-19_1b8ce7b", "task_id": "web_v1_009", "vendor": "firecrawl", "supported": "yes", "round": 2}

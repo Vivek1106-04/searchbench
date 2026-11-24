@@ -13,7 +13,16 @@ from searchbench.runner import response_cache, response_key
 
 ORDER_BIAS_SAMPLE = 30
 
-PROMPT = """You check whether web search results contain evidence for a known answer.
+# Shared with the labelling screen so humans and the judge apply the same definitions.
+RUBRIC = """\
+- "yes": one result states the known answer, or states something that directly implies it.
+- "partial": a result gives part of what is needed (for example one of two facts) or
+  states the answer with less precision than asked, but not the full answer.
+- "no": no result supports the answer, or results only mention the topic.
+Judge only the text of the results. Do not use your own knowledge to fill gaps."""
+
+PROMPT = (
+    """You check whether web search results contain evidence for a known answer.
 
 Question: {query}
 Known answer: {gold_answer}
@@ -23,15 +32,14 @@ Search results:
 {results}
 
 Decide whether the search results above support the known answer.
-- "yes": one result states the known answer, or states something that directly implies it.
-- "partial": a result gives part of what is needed (for example one of two facts) or
-  states the answer with less precision than asked, but not the full answer.
-- "no": no result supports the answer, or results only mention the topic.
-Judge only the text of the results. Do not use your own knowledge to fill gaps.
+"""
+    + RUBRIC
+    + """
 
 If "yes" or "partial", give supporting_result_index (the result number) and quote: a short
 span copied character for character from that result that shows the evidence. Do not
 paraphrase, fix typos or join text from different places. If "no", set both to null."""
+)
 
 
 class GenerateContent(Protocol):

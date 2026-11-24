@@ -1,6 +1,6 @@
 # searchbench report: 2026-11-19_1b8ce7b
 
-> **Warning: judge agreement with human labels is below 0.6 (kappa = 0.28).** Treat support@5 differences as provisional. See Judge validation.
+> **Warning: judge agreement with human labels is below 0.6 (kappa = 0.29).** Treat support@5 differences as provisional. See Judge validation.
 
 60 tasks, 3 vendors, k = 5, content cut to 2000 characters. Primary judge `gemini-3.1-pro-preview`, second judge `gemini-3.5-flash-lite`. 95% CIs by bootstrap over tasks.
 
@@ -40,11 +40,16 @@ Each cell has at most 12 tasks, so these intervals are wide. Changes in `fresh` 
 
 | comparison | n | Cohen's kappa | raw agreement |
 |---|---|---|---|
-| gemini-3.1-pro-preview vs human | 40 | 0.28 | 85% |
-| gemini-3.5-flash-lite vs human | 40 | 0.37 | 82% |
+| gemini-3.1-pro-preview vs human, round 1 | 40 | 0.28 | 85% |
+| gemini-3.5-flash-lite vs human, round 1 | 40 | 0.37 | 82% |
+| gemini-3.1-pro-preview vs human, round 2 | 40 | 0.29 | 65% |
+| gemini-3.5-flash-lite vs human, round 2 | 40 | 0.40 | 72% |
 | gemini-3.1-pro-preview vs gemini-3.5-flash-lite | 180 | 0.50 | 83% |
 
-Human labels: 40 pairs, stratified by category, 92% labelled yes. When one label dominates, chance agreement is high and kappa stays low even with high raw agreement, so both are shown.
+Round 1: 40 pairs, 92% labelled yes.
+Round 2: 40 pairs, 80% labelled yes.
+
+Round 1 was stratified by category only, and the labeller did not see the judge's rubric. Later rounds are stratified by category and judge verdict, show the rubric, and skip pairs labelled in other rounds. The warning at the top uses the latest round. When one label dominates, chance agreement is high and kappa stays low even with high raw agreement, so both are shown.
 
 | judge | quotes not found in the cited result | hallucination rate |
 |---|---|---|
