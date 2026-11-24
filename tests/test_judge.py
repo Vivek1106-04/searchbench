@@ -17,6 +17,7 @@ from searchbench.judge import (
     judgment_cache,
     order_bias_sample,
     snapshot_pairs,
+    visible_text,
 )
 from searchbench.models import Judgment, Result, Task, VendorResponse
 from searchbench.runner import response_cache, response_key
@@ -131,6 +132,46 @@ def test_prompt_is_blind_and_numbered() -> None:
 )
 def test_grounding_check(judgment: Judgment, expected: Grounded) -> None:
     assert ground(judgment, RESULTS) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "created by [Linus Torvalds](https://en.wikipedia.org/wiki/Linus_Torvalds) in 1991",
+            "created by Linus Torvalds in 1991",
+        ),
+        (
+            "finger [daemon](https://en.wikipedia.org/wiki/Daemon_(computing)) runs",
+            "finger daemon runs",
+        ),
+        ("a ![logo](https://example.com/a.png) b", "a logo b"),
+        ("port\n\n  5432", "port 5432"),
+        ("[unclosed](https://example.com", "[unclosed](https://example.com"),
+    ],
+    ids=["link", "nested-parens", "image", "whitespace", "not-a-link"],
+)
+def test_visible_text(text: str, expected: str) -> None:
+    assert visible_text(text) == expected
+
+
+def test_quote_of_rendered_markdown_is_grounded() -> None:
+    results = [
+        Result(
+            url="https://en.wikipedia.org/wiki/Linux",
+            title="Linux",
+            content="The kernel was created by [Linus Torvalds](https://w.org/LT) in 1991.",
+        )
+    ]
+    rendered = Judgment(
+        supported="yes", supporting_result_index=1, quote="created by Linus Torvalds in 1991"
+    )
+    raw = Judgment(supported="yes", supporting_result_index=1, quote="created by [Linus Torvalds]")
+    absent = Judgment(supported="yes", supporting_result_index=1, quote="created by Linus in 1990")
+
+    assert ground(rendered, results) == Grounded("yes", hallucinated=False)
+    assert ground(raw, results) == Grounded("yes", hallucinated=False)
+    assert ground(absent, results) == Grounded("no", hallucinated=True)
 
 
 async def test_fabricated_quote_from_the_model_is_downgraded(tmp_path: Path) -> None:

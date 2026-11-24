@@ -82,6 +82,16 @@ only at the text; titles were added after the first snapshot was judged and
 before any report was written, because the judge is shown titles and so is an
 agent. Grounding is computed when the report is built, so no judgment changed.
 
+A quote matches if it is in the raw text, or if its visible form is in the
+visible form of the text: markdown links and images reduced to their link text,
+whitespace collapsed. Judges quote either form. Before this, a judge quoting
+"created by Linus Torvalds in 1991" from
+`created by [Linus Torvalds](https://...) in 1991` was scored as a
+hallucination. This was found while reviewing round 2 label disagreements, so
+round 2 is not fully held out from this fix. It turned 4 of the 6 primary
+hallucinations into supported verdicts, all on Firecrawl, whose output is
+markdown. Quotes with changed punctuation or garbled characters still fail.
+
 The primary judge is `gemini-3.1-pro-preview` on Vertex AI, the strongest Pro
 model available to the project. Every call sends seed 1 and temperature 0.
 This model is a thinking model, and in testing its reruns kept the same
@@ -151,7 +161,7 @@ Threats to validity:
 - 60 tasks is small. Most differences between vendors are within noise.
 - One judge family: Gemini judges results that may include Google-indexed
   content.
-- Judge agreement with the human labels is low by kappa (0.29 on round 2, see
+- Judge agreement with the human labels is low by kappa (0.39 on round 2, see
   the report). The judge is stricter than the author: most disagreements are
   the author saying yes where the judge said partial or no. Treat support@5
   differences as provisional.

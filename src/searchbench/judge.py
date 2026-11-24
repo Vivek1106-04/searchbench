@@ -1,5 +1,6 @@
 import asyncio
 import random
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -66,21 +67,31 @@ def build_prompt(task: Task, results: Sequence[Result]) -> str:
     )
 
 
+# A markdown link or image; the URL may hold one level of parentheses, as Wikipedia URLs do.
+MARKDOWN_LINK = re.compile(r"!?\[([^\]]*)\]\((?:[^()]|\([^()]*\))*\)")
+
+
+def visible_text(text: str) -> str:
+    """Text as a reader sees it: markdown links reduced to their text, whitespace collapsed."""
+    return " ".join(MARKDOWN_LINK.sub(r"\1", text).split())
+
+
 def ground(judgment: Judgment, results: Sequence[Result]) -> Grounded:
     """Keep a positive verdict only if its quote is literally in the cited result.
 
     The title counts as part of the result: the judge is shown it, and so is an agent.
+    A quote may match the raw text or the visible text: judges quote either form.
     """
     if judgment.supported == "no":
         return Grounded("no", hallucinated=False)
     index, quote = judgment.supporting_result_index, (judgment.quote or "").strip()
-    if (
-        index is not None
-        and index <= len(results)
-        and quote
-        and (quote in results[index - 1].content or quote in results[index - 1].title)
-    ):
-        return Grounded(judgment.supported, hallucinated=False)
+    if index is not None and index <= len(results) and quote:
+        cited = results[index - 1]
+        shown = visible_text(quote)
+        if any(
+            quote in text or shown in visible_text(text) for text in (cited.content, cited.title)
+        ):
+            return Grounded(judgment.supported, hallucinated=False)
     return Grounded("no", hallucinated=True)
 
 

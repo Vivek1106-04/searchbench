@@ -15,7 +15,7 @@ it validates its LLM judge against human labels instead of trusting it.
 |---|---|---|---|---|
 | Exa | 0.95 [0.89, 0.99] | 0.90 [0.82, 0.97] | 1.5 s / 2.1 s | 0.0070 |
 | Tavily | 0.90 [0.82, 0.97] | 0.78 [0.67, 0.88] | 1.6 s / 3.2 s | 0.0080 |
-| Firecrawl | 0.73 [0.62, 0.83] | 0.82 [0.72, 0.92] | 2.0 s / 4.0 s | 0.0076 |
+| Firecrawl | 0.80 [0.71, 0.88] | 0.82 [0.72, 0.92] | 2.0 s / 4.0 s | 0.0076 |
 
 Exa and Tavily both score higher than Firecrawl, and those differences hold
 under a paired bootstrap. Exa versus Tavily (+0.05, CI -0.03 to 0.13) is too
@@ -25,10 +25,12 @@ quote; that is part of what this measures.
 
 Read this with the judge caveat: on a second round of 40 labels, sampled to
 include the judge's no and partial verdicts, the primary judge agrees with the
-author on 65% of pairs and Cohen's kappa is 0.29, below the 0.6 bar. Most
-disagreements are the author saying yes where the judge said partial or no.
-Treat the numbers as provisional. How the labelling rounds work is in the
-methodology.
+author on 72% of pairs and Cohen's kappa is 0.39, below the 0.6 bar. Most
+remaining disagreements are the author saying yes where the judge said partial
+or no. Treat the numbers as provisional. Reviewing those labels also found a bug
+in the grounding check: it rejected quotes of markdown link text, which hit
+Firecrawl's markdown output hardest. Fixing it moved Firecrawl from 0.73 to
+0.80; how the rounds and the fix were done is in the methodology.
 
 Full report, per-category tables and judge validation:
 [results/2026-11-19_1b8ce7b/REPORT.md](results/2026-11-19_1b8ce7b/REPORT.md).
