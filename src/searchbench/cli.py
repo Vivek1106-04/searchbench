@@ -27,6 +27,7 @@ from searchbench.label import LABELS_PER_CATEGORY, label_sample, load_labels, ru
 from searchbench.models import Task, load_tasks
 from searchbench.report import PLOT_NAME, build_report, write_plot
 from searchbench.runner import RunSummary, run_snapshot, snapshot_id
+from searchbench.scoring import score_pairs
 from searchbench.vendors.base import SearchVendor
 from searchbench.vendors.exa import ExaVendor
 from searchbench.vendors.firecrawl import FirecrawlVendor
@@ -163,21 +164,44 @@ def label(
     suite: Annotated[Path, typer.Option()] = Path("suites/web_v1/tasks.jsonl"),
     results: Annotated[Path, typer.Option()] = Path("results"),
     labels: Annotated[Path, typer.Option()] = Path("suites/web_v1/human_labels.jsonl"),
+    round_number: Annotated[
+        int,
+        typer.Option("--round", min=1, help="Labelling round; other rounds' pairs are skipped."),
+    ] = 1,
 ) -> None:
-    """Label a blind, category-stratified sample of (task, vendor) pairs by hand."""
+    """Label a blind sample of (task, vendor) pairs, stratified by category and judge verdict."""
     config = load_config(config_path)
-    pairs = snapshot_pairs(
-        load_tasks(suite),
-        list(config.vendors),
-        results / snapshot,
-        config.run.k,
-        config.run.max_content_chars,
-    )
+    judge = config.judge
+    earlier = {
+        (lb.task_id, lb.vendor)
+        for lb in load_labels(labels)
+        if lb.snapshot == snapshot and lb.round != round_number
+    }
+    pairs = [
+        pair
+        for pair in snapshot_pairs(
+            load_tasks(suite),
+            list(config.vendors),
+            results / snapshot,
+            config.run.k,
+            config.run.max_content_chars,
+        )
+        if (pair.task.id, pair.vendor) not in earlier
+    ]
     if not pairs:
-        raise typer.BadParameter(f"no stored responses in {results / snapshot}")
-    sample = label_sample(pairs, LABELS_PER_CATEGORY, config.judge.seed)
+        raise typer.BadParameter(f"no unlabelled stored responses in {results / snapshot}")
+    scored = score_pairs(
+        pairs, results / snapshot, judge.primary_model, judge.seed, judge.temperature
+    )
+    verdicts = [s.grounded.supported for s in scored]
+    sample = label_sample(pairs, verdicts, LABELS_PER_CATEGORY, judge.seed)
     recorded = run_labeling(
-        sample, snapshot, labels, ask=lambda message: str(typer.prompt(message)), show=typer.echo
+        sample,
+        snapshot,
+        labels,
+        ask=lambda message: str(typer.prompt(message)),
+        show=typer.echo,
+        round_number=round_number,
     )
     typer.echo(f"recorded {recorded} label(s) in {labels}")
 

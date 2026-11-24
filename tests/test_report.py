@@ -42,7 +42,8 @@ def test_headline_pairwise_and_category_tables(tmp_path: Path) -> None:
     assert "| significant |" in text
     assert "| fresh | 1.00 [1.00, 1.00] | 0.50 [" in text
     assert "| multi_hop | n/a | n/a |" in text
-    assert "| judge-pro vs human | 10 | 1.00 | 100% |" in text
+    assert "| judge-pro vs human, round 1 | 10 | 1.00 | 100% |" in text
+    assert "Round 1: 10 pairs, 50% labelled yes." in text
     assert "Order bias: 0 of 20 sampled pairs (0%)" in text
     assert [s.vendor for s in stats] == ["alpha", "beta"]
 
@@ -69,6 +70,22 @@ def test_low_kappa_puts_a_warning_at_the_top(tmp_path: Path) -> None:
     assert text.splitlines()[2].startswith(
         f"> **Warning: judge agreement with human labels is below {KAPPA_FLOOR}"
     )
+
+
+def test_rounds_get_their_own_rows_and_the_latest_sets_the_warning(tmp_path: Path) -> None:
+    ts = tasks()
+    write_snapshot(tmp_path, ts, alpha_yes_beta_half(ts))
+    matching = labels_matching(ts)
+    first = [label.model_copy(update={"supported": "partial"}) for label in matching[:5]]
+    later = [label.model_copy(update={"round": 2}) for label in matching[5:]]
+
+    text, _ = build_report(SNAP, tmp_path, ts, config(), first + later)
+
+    assert "Warning" not in text
+    assert "| judge-pro vs human, round 1 | 5 | 0.00 | 0% |" in text
+    assert "| judge-pro vs human, round 2 | 5 | 1.00 | 100% |" in text
+    assert "| judge-lite vs human, round 2 | 5 |" in text
+    assert "Round 2: 5 pairs, 60% labelled yes." in text
 
 
 def test_missing_labels_also_warn_and_skip_human_rows(tmp_path: Path) -> None:

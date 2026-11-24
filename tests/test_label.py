@@ -2,9 +2,11 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 
-from searchbench.judge import Pair
+import pytest
+
+from searchbench.judge import RUBRIC, Pair
 from searchbench.label import label_sample, load_labels, render, run_labeling
-from searchbench.models import Category, HumanLabel, Result, Task, VendorResponse
+from searchbench.models import Category, HumanLabel, Result, Support, Task, VendorResponse
 
 CATEGORIES: list[Category] = ["factual", "technical_docs", "fresh", "multi_hop", "long_tail"]
 
@@ -49,21 +51,42 @@ class Script:
         self.shown.append(text)
 
 
+def all_yes(pairs: list[Pair]) -> list[Support]:
+    return ["yes"] * len(pairs)
+
+
 def test_sample_is_stratified_seeded_and_mixed() -> None:
-    sample = label_sample(all_pairs(), 8, seed=1)
+    pairs = all_pairs()
+    sample = label_sample(pairs, all_yes(pairs), 8, seed=1)
 
     assert len(sample) == 40
     assert Counter(p.task.category for p in sample) == dict.fromkeys(CATEGORIES, 8)
-    assert sample == label_sample(all_pairs(), 8, seed=1)
+    assert sample == label_sample(pairs, all_yes(pairs), 8, seed=1)
     assert len({p.task.category for p in sample[:8]}) > 1
 
 
 def test_small_category_contributes_what_it_has() -> None:
     pairs = [pair(1, "fresh"), pair(2, "fresh"), *[pair(10 + i, "factual") for i in range(9)]]
 
-    sample = label_sample(pairs, 8, seed=1)
+    sample = label_sample(pairs, all_yes(pairs), 8, seed=1)
 
     assert Counter(p.task.category for p in sample) == {"fresh": 2, "factual": 8}
+
+
+def test_rare_verdicts_are_drawn_in_turn_with_common_ones() -> None:
+    pairs = [pair(i, "factual") for i in range(36)]
+    counts: dict[Support, int] = {"no": 3, "partial": 3, "yes": 30}
+    verdicts = [v for v, n in counts.items() for _ in range(n)]
+    verdict_of = {p.task.id: v for p, v in zip(pairs, verdicts, strict=True)}
+
+    sample = label_sample(pairs, verdicts, 8, seed=1)
+
+    assert Counter(verdict_of[p.task.id] for p in sample) == {"no": 3, "partial": 3, "yes": 2}
+
+
+def test_sample_needs_one_verdict_per_pair() -> None:
+    with pytest.raises(ValueError):
+        label_sample([pair(1, "factual")], [], 8, seed=1)
 
 
 def test_render_is_blind_to_urls_and_vendor() -> None:
@@ -74,6 +97,7 @@ def test_render_is_blind_to_urls_and_vendor() -> None:
     assert "[2] Title 1" in text
     assert "secret" not in text
     assert "firecrawl" not in text
+    assert RUBRIC in text
 
 
 def test_render_marks_empty_results() -> None:
@@ -105,6 +129,21 @@ def test_quit_keeps_progress_and_resume_skips_labelled_pairs(tmp_path: Path) -> 
 
     assert [label.task_id for label in load_labels(path)] == ["t1", "t2", "t3"]
     assert "pair 2 of 3" in second.shown[0]
+
+
+def test_labels_carry_their_round(tmp_path: Path) -> None:
+    path = tmp_path / "human_labels.jsonl"
+    script = Script("n")
+
+    run_labeling([pair(1, "factual")], "snap", path, script.ask, script.show, round_number=2)
+
+    assert [label.round for label in load_labels(path)] == [2]
+
+
+def test_labels_without_a_round_are_round_one() -> None:
+    line = '{"snapshot": "s", "task_id": "t1", "vendor": "exa", "supported": "yes"}'
+
+    assert HumanLabel.model_validate_json(line).round == 1
 
 
 def test_labels_from_another_snapshot_do_not_count_as_done(tmp_path: Path) -> None:

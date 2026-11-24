@@ -23,10 +23,12 @@ close to call with 60 tasks. Firecrawl's default output is short snippets
 (median 156 characters per result), which leaves the judge little text to
 quote; that is part of what this measures.
 
-Read this with the judge caveat: the primary judge agrees with the author's
-labels on 85% of 40 pairs, but Cohen's kappa is 0.28, below the 0.6 bar. Most
-labels are yes, which keeps kappa low, but the disagreements are real (mostly
-multi-hop partial versus yes). Treat the numbers as provisional.
+Read this with the judge caveat: on a second round of 40 labels, sampled to
+include the judge's no and partial verdicts, the primary judge agrees with the
+author on 65% of pairs and Cohen's kappa is 0.29, below the 0.6 bar. Most
+disagreements are the author saying yes where the judge said partial or no.
+Treat the numbers as provisional. How the labelling rounds work is in the
+methodology.
 
 Full report, per-category tables and judge validation:
 [results/2026-11-19_1b8ce7b/REPORT.md](results/2026-11-19_1b8ce7b/REPORT.md).

@@ -91,10 +91,18 @@ the report is built from that cache only.
 
 The judge is validated, not trusted:
 
-- Human labels: the author labelled 40 pairs, 8 per category, with the same
-  blind view the judge had (`bench label`). The report gives Cohen's kappa and
-  raw agreement against these labels, and puts a warning at the top when kappa
-  is below 0.6.
+- Human labels: the author labels pairs with the same blind view the judge had
+  (`bench label`), in rounds. Round 1 was 40 pairs, 8 per category; the
+  labelling screen did not show the judge's rubric, and 37 of the 40 labels
+  were yes. On review, 4 of the primary judge's 6 disagreements were
+  multi-hop pairs where the label relied on knowledge outside the results,
+  which the rubric forbids. Round 1 labels are kept as recorded. Later rounds
+  (`bench label --round 2`) show the rubric, are stratified by category and by
+  the primary judge's verdict so that no and partial pairs are labelled too,
+  and skip pairs labelled in other rounds. The rubric was not changed to fit
+  round 1, so a later round is a held-out check. The report gives Cohen's
+  kappa and raw agreement per round, and puts a warning at the top when the
+  latest round's kappa is below 0.6.
 - Second judge: `gemini-3.5-flash-lite` judges every pair, and the report gives
   agreement between the two judges. It was also the weaker judge: it often
   copied the gold evidence from the prompt as its quote instead of quoting a
@@ -143,9 +151,10 @@ Threats to validity:
 - 60 tasks is small. Most differences between vendors are within noise.
 - One judge family: Gemini judges results that may include Google-indexed
   content.
-- Judge agreement with the human labels is low by kappa (see the report),
-  partly because most labels are yes. Treat support@5 differences as
-  provisional.
+- Judge agreement with the human labels is low by kappa (0.29 on round 2, see
+  the report). The judge is stricter than the author: most disagreements are
+  the author saying yes where the judge said partial or no. Treat support@5
+  differences as provisional.
 - Gold answers can go stale; `as_of` records when each was checked.
 - Free tiers may differ from paid tiers in ranking, freshness or latency.
 - Content is cut to 2,000 characters and each vendor is judged on its default

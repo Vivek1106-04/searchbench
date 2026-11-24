@@ -63,6 +63,14 @@ def vendor_stats(vendor: str, scored: Sequence[Scored]) -> VendorStats:
     )
 
 
+@dataclass(frozen=True)
+class HumanRound:
+    number: int
+    yes_share: float
+    primary: Agreement
+    second: Agreement
+
+
 def agreement(a: Sequence[Support], b: Sequence[Support]) -> Agreement:
     raw = sum(x == y for x, y in zip(a, b, strict=True)) / len(a)
     return Agreement(n=len(a), kappa=cohen_kappa(a, b), raw=raw)
@@ -111,12 +119,20 @@ def build_report(
     missing = [(lb.task_id, lb.vendor) for lb in mine if (lb.task_id, lb.vendor) not in index]
     if missing:
         raise ValueError(f"human labels for pairs not in {snapshot_dir}: {missing}")
-    labelled = [index[(label.task_id, label.vendor)] for label in mine]
-    human = [label.supported for label in mine]
-    vs_human = agreement(human, [primary[i].grounded.supported for i in labelled]) if mine else None
-    second_vs_human = (
-        agreement(human, [second[i].grounded.supported for i in labelled]) if mine else None
-    )
+    rounds: list[HumanRound] = []
+    for number in sorted({label.round for label in mine}):
+        batch = [label for label in mine if label.round == number]
+        labelled = [index[(label.task_id, label.vendor)] for label in batch]
+        human = [label.supported for label in batch]
+        rounds.append(
+            HumanRound(
+                number=number,
+                yes_share=human.count("yes") / len(human),
+                primary=agreement(human, [primary[i].grounded.supported for i in labelled]),
+                second=agreement(human, [second[i].grounded.supported for i in labelled]),
+            )
+        )
+    vs_human = rounds[-1].primary if rounds else None
     between = agreement(
         [s.grounded.supported for s in primary], [s.grounded.supported for s in second]
     )
@@ -193,17 +209,23 @@ def build_report(
         "| comparison | n | Cohen's kappa | raw agreement |",
         "|---|---|---|---|",
     ]
-    for name, result in (
-        (f"{judge.primary_model} vs human", vs_human),
-        (f"{judge.second_model} vs human", second_vs_human),
-        (f"{judge.primary_model} vs {judge.second_model}", between),
-    ):
-        if result is not None:
-            lines.append(f"| {name} | {result.n} | {result.kappa:.2f} | {result.raw:.0%} |")
-    yes_share = human.count("yes") / len(human) if human else 0.0
+    rows = [
+        (f"{model} vs human, round {r.number}", result)
+        for r in rounds
+        for model, result in ((judge.primary_model, r.primary), (judge.second_model, r.second))
+    ]
+    rows.append((f"{judge.primary_model} vs {judge.second_model}", between))
+    for name, result in rows:
+        lines.append(f"| {name} | {result.n} | {result.kappa:.2f} | {result.raw:.0%} |")
+    lines.append("")
+    lines += [
+        f"Round {r.number}: {r.primary.n} pairs, {r.yes_share:.0%} labelled yes." for r in rounds
+    ]
     lines += [
         "",
-        f"Human labels: {len(human)} pairs, stratified by category, {yes_share:.0%} labelled yes. "
+        "Round 1 was stratified by category only, and the labeller did not see the judge's "
+        "rubric. Later rounds are stratified by category and judge verdict, show the rubric, "
+        "and skip pairs labelled in other rounds. The warning at the top uses the latest round. "
         "When one label dominates, chance agreement is high and kappa stays low even with "
         "high raw agreement, so both are shown.",
         "",

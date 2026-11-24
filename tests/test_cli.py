@@ -8,10 +8,11 @@ import pytest
 import respx
 import typer
 from google.genai import types
-from typer.testing import CliRunner
+from typer.testing import CliRunner, Result
 
 from searchbench import cli, runner
 from searchbench.cli import app
+from searchbench.label import load_labels
 from searchbench.vendors import exa, firecrawl, tavily
 from tests.snapshots import task, verdict, write_snapshot
 
@@ -318,57 +319,6 @@ class _Aio:
     models = "models"
 
 
-@respx.mock
-def test_label_command_records_answers(
-    keys: None, suite: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    mock_vendors()
-    instant_runner(monkeypatch)
-    invoke_run(tmp_path, suite)
-    labels = tmp_path / "human_labels.jsonl"
-
-    result = CliRunner().invoke(
-        app,
-        [
-            "label",
-            "--snapshot",
-            "snap",
-            "--config",
-            str(REPO / "config.toml"),
-            "--suite",
-            str(suite),
-            "--results",
-            str(tmp_path / "results"),
-            "--labels",
-            str(labels),
-        ],
-        input="y\nq\n",
-    )
-
-    assert result.exit_code == 0, result.output
-    assert "recorded 1 label(s)" in result.output
-    assert "https://" not in result.output
-    assert len(labels.read_text().splitlines()) == 1
-
-
-def test_label_command_needs_stored_responses(tmp_path: Path, suite: Path) -> None:
-    message = usage_error(
-        [
-            "label",
-            "--snapshot",
-            "none",
-            "--config",
-            str(REPO / "config.toml"),
-            "--suite",
-            str(suite),
-            "--results",
-            str(tmp_path),
-        ]
-    )
-
-    assert "no stored responses" in message
-
-
 SYNTHETIC_CONFIG = """
 [run]
 k = 5
@@ -438,3 +388,54 @@ def test_drift_command_prints_the_comparison(tmp_path: Path) -> None:
     assert "# Drift: s1 -> s2" in result.output
     assert "| alpha | other | 4 | -1.00 [-1.00, -1.00] | yes |" in result.output
     assert "| beta | fresh | 1 |" in result.output
+
+
+def invoke_label(tmp_path: Path, options: list[str], answers: str, *extra: str) -> Result:
+    labels = tmp_path / "human_labels.jsonl"
+    return CliRunner().invoke(
+        app,
+        ["label", "--snapshot", "s1", *options, "--labels", str(labels), *extra],
+        input=answers,
+    )
+
+
+def test_label_command_records_answers(tmp_path: Path) -> None:
+    options = synthetic_workspace(tmp_path, {"s1": "yes"})
+
+    result = invoke_label(tmp_path, options, "y\nq\n")
+
+    assert result.exit_code == 0, result.output
+    assert "recorded 1 label(s)" in result.output
+    assert "https://" not in result.output
+    assert len((tmp_path / "human_labels.jsonl").read_text().splitlines()) == 1
+
+
+def test_label_round_skips_pairs_from_other_rounds(tmp_path: Path) -> None:
+    options = synthetic_workspace(tmp_path, {"s1": "yes"})
+    invoke_label(tmp_path, options, "y\n" * 9 + "q\n")
+
+    result = invoke_label(tmp_path, options, "n\n", "--round", "2")
+
+    assert result.exit_code == 0, result.output
+    assert "pair 1 of 1" in result.output
+    labels = load_labels(tmp_path / "human_labels.jsonl")
+    assert [label.round for label in labels] == [1] * 9 + [2]
+    assert len({(label.task_id, label.vendor) for label in labels}) == 10
+
+
+def test_label_command_needs_stored_responses(tmp_path: Path, suite: Path) -> None:
+    message = usage_error(
+        [
+            "label",
+            "--snapshot",
+            "none",
+            "--config",
+            str(REPO / "config.toml"),
+            "--suite",
+            str(suite),
+            "--results",
+            str(tmp_path),
+        ]
+    )
+
+    assert "no unlabelled stored responses" in message
